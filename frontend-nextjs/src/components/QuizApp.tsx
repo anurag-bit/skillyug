@@ -1,42 +1,33 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ChevronRight, 
-  Star, 
-  Trophy, 
-  Clock, 
-  Users, 
-  TrendingUp, 
-  Target, 
-  Rocket, 
-  ArrowRight, 
-  Sparkles, 
-  Terminal, 
-  Code, 
-  Globe, 
-  Cpu, 
-  Bot, 
-  GitBranch, 
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Star,
+  Trophy,
+  Clock,
+  Users,
+  TrendingUp,
+  Target,
+  Rocket,
+  ArrowRight,
+  Sparkles,
+  Code,
+  Globe,
+  Cpu,
+  Bot,
+  GitBranch,
   ArrowLeft,
   Zap,
-  Hash,
   RotateCcw,
-  CheckCircle,
-  BookOpen,
-  Award,
-  MapPin,
-  Eye,
-  ChevronDown,
-  ChevronUp
+  CheckCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
 // Import course data
 import coursesData from '../data/courses.json';
 import { WelcomeScreenSkeleton, QuestionScreenSkeleton, ResultScreenSkeleton } from '@/components/ui/quiz-skeletons';
-import { LoadingOverlay, TransitionLoader } from '@/components/ui/loading-animations';
+import { TransitionLoader } from '@/components/ui/loading-animations';
 import { ResultCalculationLoader } from '@/components/ui/result-calculation-loader';
 
 interface Question {
@@ -68,11 +59,31 @@ interface CourseRecommendation {
   career_outcomes: string[];
   next_courses: string[];
   emoji: string;
-  trackData?: any;
-  allCourses?: any[];
+  trackData?: {
+    name: string;
+    description: string;
+    emoji: string;
+    color: string;
+    total_duration: string;
+    career_paths: string[];
+    courses: string[];
+  };
+  allCourses?: CourseRecommendation[];
   confidence?: number;
   scores?: { webdev: number; javadsa: number; python: number };
-  alternativeTracks?: any[];
+  alternativeTracks?: {
+    track: string;
+    data: {
+      name: string;
+      description: string;
+      emoji: string;
+      color: string;
+      total_duration: string;
+      career_paths: string[];
+      courses: string[];
+    };
+    courses: CourseRecommendation[];
+  }[];
 }
 
 const CourseRecommendationQuiz = () => {
@@ -80,70 +91,12 @@ const CourseRecommendationQuiz = () => {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [showAffirmation, setShowAffirmation] = useState(false);
   const [recommendation, setRecommendation] = useState<CourseRecommendation | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionType, setTransitionType] = useState<'processing' | 'calculating' | 'generating'>('processing');
   const [isCalculatingResult, setIsCalculatingResult] = useState(false);
-  const [showFullTrack, setShowFullTrack] = useState(false);
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4 }
-    }
-  };
-
-  const cardHoverVariants = {
-    hover: { 
-      scale: 1.02,
-      y: -5,
-      transition: { duration: 0.2 }
-    }
-  };
-
-  const buttonVariants = {
-    hover: {
-      scale: 1.05,
-      transition: { duration: 0.2 }
-    },
-    tap: {
-      scale: 0.98
-    }
-  };
-
-  // Handle initial loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialLoading(false);
-    }, 1500); // Show skeleton for 1.5 seconds to ensure smooth loading experience
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Handle result calculation completion
-  const handleResultCalculationComplete = () => {
-    setIsCalculatingResult(false);
-    setCurrentStep(8);
-    setIsAnimating(false);
-  };
-
-  const questions: Question[] = [
+  const questions: Question[] = useMemo(() => [
     {
       id: 1,
       question: "Which of these sounds fun to you right now?",
@@ -207,70 +160,11 @@ const CourseRecommendationQuiz = () => {
         { text: "Become an AI, ML, or data expert", track: "python", emoji: "🎯" }
       ]
     }
-  ];
+  ], []);
 
-
-
-  const affirmations = {
-    webdev: ["Great choice! 🌟", "You're going to build amazing things! 🚀", "Web dev is so creative! 🎨"],
-    javadsa: ["Smart thinking! 💡", "You'll be a problem-solving master! 🧩", "Big tech, here you come! 🏢"],
-    python: ["Excellent pick! 🐍", "Data science is the future! 🚀", "AI magic awaits you! ✨"]
-  };
-
-  const handleAnswer = (questionId: number, optionIndex: number) => {
-    setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
-    
-    // Show processing animation
-    setTransitionType('processing');
-    setIsTransitioning(true);
-    
-    // Show affirmation
-    setShowAffirmation(true);
-    const selectedOption = questions[questionId - 1].options[optionIndex];
-    
-    // 1.2 second delay for processing each question
-    setTimeout(() => {
-      setShowAffirmation(false);
-      setIsTransitioning(false);
-      handleNext();
-    }, 1200);
-  };
-
-  const handleNext = () => {
-    if (currentStep < 8) {
-      setIsAnimating(true);
-      
-      // Show calculating animation for the last question
-      if (currentStep === 7) {
-        setIsCalculatingResult(true);
-        setTimeout(() => {
-          setCurrentStep(prev => prev + 1);
-          setIsAnimating(false);
-        }, 300);
-      } else {
-        setTimeout(() => {
-          setCurrentStep(prev => prev + 1);
-          setIsAnimating(false);
-        }, 300);
-      }
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setIsAnimating(true);
-      setTimeout(() => {
-        setCurrentStep(prev => prev - 1);
-        setIsAnimating(false);
-      }, 300);
-    }
-  };
-
-  const calculateRecommendation = () => {
+  const calculateRecommendation = React.useCallback(() => {
     const scores: { webdev: number; javadsa: number; python: number } = { webdev: 0, javadsa: 0, python: 0 };
     const experienceLevel = answers[1]; // Experience level (0: beginner, 1: some exp, 2: experienced)
-    const goalType = answers[6]; // Career goals
-    const projectType = answers[4]; // Project preference
     
     // Enhanced scoring with weights
     Object.entries(answers).forEach(([questionId, optionIndex]) => {
@@ -302,17 +196,16 @@ const CourseRecommendationQuiz = () => {
     if (experienceLevel === 0) { // Complete beginner
       recommendedCourse = trackCourses.find(course => course.level === 'beginner');
     } else if (experienceLevel === 1) { // Some experience
-      recommendedCourse = trackCourses.find(course => course.level === 'intermediate') || 
+      recommendedCourse = trackCourses.find(course => course.level === 'intermediate') ||
                          trackCourses.find(course => course.level === 'beginner');
     } else { // Experienced
-      recommendedCourse = trackCourses.find(course => course.level === 'advanced') || 
+      recommendedCourse = trackCourses.find(course => course.level === 'advanced') ||
                          trackCourses.find(course => course.level === 'intermediate');
     }
     
     // Calculate confidence score based on answer consistency
     const totalAnswers = Object.keys(answers).length;
     const maxScore = Math.max(...Object.values(scores));
-    const avgScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / 3;
     const confidence = Math.min(Math.round((maxScore / (totalAnswers * 2.5)) * 100), 97);
     
     // Ensure we have a valid course
@@ -336,7 +229,105 @@ const CourseRecommendationQuiz = () => {
           courses: coursesData.courses.filter(course => course.track === track)
         }))
     } as CourseRecommendation;
+  }, [answers, questions]);
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        staggerChildren: 0.1
+      }
+    }
   };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.4 }
+    }
+  };
+
+
+  const buttonVariants = {
+    hover: {
+      scale: 1.05,
+      transition: { duration: 0.2 }
+    },
+    tap: {
+      scale: 0.98
+    }
+  };
+
+  // Handle initial loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 1500); // Show skeleton for 1.5 seconds to ensure smooth loading experience
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle result calculation completion
+  const handleResultCalculationComplete = () => {
+    setIsCalculatingResult(false);
+    setCurrentStep(8);
+  };
+
+
+  const affirmations = {
+    webdev: ["Great choice! 🌟", "You're going to build amazing things! 🚀", "Web dev is so creative! 🎨"],
+    javadsa: ["Smart thinking! 💡", "You'll be a problem-solving master! 🧩", "Big tech, here you come! 🏢"],
+    python: ["Excellent pick! 🐍", "Data science is the future! 🚀", "AI magic awaits you! ✨"]
+  };
+
+  const handleAnswer = (questionId: number, optionIndex: number) => {
+    setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+    
+    // Show processing animation
+    setTransitionType('processing');
+    setIsTransitioning(true);
+    
+    // Show affirmation
+    setShowAffirmation(true);
+    
+    // 1.2 second delay for processing each question
+    setTimeout(() => {
+      setShowAffirmation(false);
+      setIsTransitioning(false);
+      handleNext();
+    }, 1200);
+  };
+
+  const handleNext = () => {
+    if (currentStep < 8) {
+      // Show calculating animation for the last question
+      if (currentStep === 7) {
+        setIsCalculatingResult(true);
+        setTimeout(() => {
+          setCurrentStep(prev => prev + 1);
+        }, 300);
+      } else {
+        setTimeout(() => {
+          setCurrentStep(prev => prev + 1);
+        }, 300);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setTimeout(() => {
+        setCurrentStep(prev => prev - 1);
+      }, 300);
+    }
+  };
+
 
   useEffect(() => {
     if (currentStep === 8 && !recommendation && !isCalculatingResult) {
@@ -348,7 +339,7 @@ const CourseRecommendationQuiz = () => {
         setIsCalculatingResult(false);
       }, 4800);
     }
-  }, [currentStep, recommendation, isCalculatingResult]);
+  }, [currentStep, recommendation, isCalculatingResult, calculateRecommendation]);
 
   const WelcomeScreen = () => (
     <motion.div 

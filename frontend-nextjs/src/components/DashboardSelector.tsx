@@ -5,9 +5,9 @@ import { useAuth } from "../hooks/AuthContext";
 import dynamic from 'next/dynamic';
 
 // Dynamically import dashboard components to avoid SSR issues
-const AdminDashboard = dynamic(() => import('../pages/AdminDashboard'), { ssr: false });
-const StudentDashboard = dynamic(() => import('../pages/StudentDashboard'), { ssr: false });
-const MentorsDashboard = dynamic(() => import('../pages/MentorsDashboard'), { ssr: false });
+const AdminDashboard = dynamic(() => import('../app/AdminDashboard/page'), { ssr: false });
+const StudentDashboard = dynamic(() => import('../app/StudentDashboard/page'), { ssr: false });
+const MentorsDashboard = dynamic(() => import('../app/MentorsDashboard/page'), { ssr: false });
 
 const DashboardSelector = () => {
   const { profile } = useAuth();

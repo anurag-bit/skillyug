@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 
-export default auth((req) => {
+export default auth(() => {
   // Add any middleware logic here if needed
   // For now, just let NextAuth handle authentication
 })

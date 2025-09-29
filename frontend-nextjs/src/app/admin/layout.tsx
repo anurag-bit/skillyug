@@ -73,7 +73,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
     
     // Redirect to home if not admin
-    if (session?.user?.userType !== 'ADMIN') {
+    if (session?.user?.role !== 'ADMIN') {
       router.push('/');
       return;
     }
@@ -89,7 +89,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   // Show nothing while redirecting (prevents flash of content)
-  if (status === 'unauthenticated' || session?.user?.userType !== 'ADMIN') {
+  if (status === 'unauthenticated' || session?.user?.role !== 'ADMIN') {
     return null;
   }
 

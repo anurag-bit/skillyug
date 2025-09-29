@@ -62,7 +62,7 @@ const createApiInstance = (): AxiosInstance => {
         if (session?.user) {
           // Add session info to headers if needed
           config.headers['X-User-ID'] = session.user.id;
-          config.headers['X-User-Type'] = session.user.userType;
+          config.headers['X-User-Type'] = session.user.role;
         }
 
         // Fallback to localStorage token if available

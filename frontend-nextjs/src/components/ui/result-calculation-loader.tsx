@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Bot, Zap, Sparkles, Target, CheckCircle } from 'lucide-react';
 
 interface CalculationStep {
@@ -19,7 +19,7 @@ export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalcula
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
 
-  const steps: CalculationStep[] = [
+  const steps: CalculationStep[] = useMemo(() => [
     {
       id: 'analyzing',
       label: 'Analyzing your preferences',
@@ -44,7 +44,7 @@ export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalcula
       icon: <Zap className="w-5 h-5" />,
       duration: 900
     }
-  ];
+  ], []);
 
   useEffect(() => {
     if (!isVisible) {
@@ -53,7 +53,7 @@ export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalcula
       return;
     }
 
-    let timeouts: NodeJS.Timeout[] = [];
+    const timeouts: NodeJS.Timeout[] = [];
     let totalDelay = 0;
 
     steps.forEach((step, index) => {
@@ -80,7 +80,7 @@ export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalcula
     return () => {
       timeouts.forEach(timeout => clearTimeout(timeout));
     };
-  }, [isVisible, onComplete]);
+  }, [isVisible, onComplete, steps]);
 
   if (!isVisible) return null;
 
@@ -106,7 +106,6 @@ export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalcula
           {steps.map((step, index) => {
             const isActive = currentStep === index;
             const isCompleted = completedSteps.has(step.id);
-            const isPending = currentStep < index;
 
             return (
               <div 

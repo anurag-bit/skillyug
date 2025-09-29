@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import { useAuth } from "../hooks/AuthContext";
+import { useAuth } from "../../hooks/AuthContext";
 import { LogOut, Book, Gamepad, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 
@@ -135,12 +135,5 @@ const StudentDashboard = () => {
     </div>
   );
 };
-
-// Disable static generation to prevent AuthProvider issues during build
-export async function getServerSideProps() {
-  return {
-    props: {}
-  };
-}
 
 export default StudentDashboard;

@@ -2,6 +2,11 @@
 const nextConfig = {
     /* config options here */
     output: 'standalone',
+    
+    // Disable static optimization for pages with client-side features
+    experimental: {
+      missingSuspenseWithCSRBailout: false,
+    },
   
     env: {
       NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,

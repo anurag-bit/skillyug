@@ -118,7 +118,7 @@ export default function ApiConnectivityTest({ className = '' }: ApiConnectivityT
             message: `Authentication successful for user: ${session.user.email}`,
             data: {
               userId: session.user.id,
-              userType: session.user.userType,
+              userType: session.user.role,
               hasToken: !!session.user.accessToken,
             },
           };
