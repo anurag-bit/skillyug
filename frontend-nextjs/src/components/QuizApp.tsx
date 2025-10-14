@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, 
@@ -33,322 +33,163 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-// Import course data
-import coursesData from '../data/courses.json';
+// Optimized imports
+import { QUIZ_CONFIG, TRACK_DETAILS, AFFIRMATIONS, TRACK_TYPES } from '@/constants/quiz';
+import { Question, CourseRecommendation, UIState, QuizStep, AnswerRecord } from '@/types/quiz';
+import { QUIZ_QUESTIONS } from '@/data/quiz-questions';
+import { calculateRecommendation, getRandomAffirmation } from '@/utils/quiz-calculator';
+import { getTrackIcon, getTrackDetails, getTrackGradient, getAffirmationGradient } from '@/utils/track-utils';
+import { 
+  fadeInUp, 
+  fadeInDown, 
+  scaleIn, 
+  slideInFromLeft, 
+  slideInFromRight,
+  hoverScale,
+  buttonHover,
+  pulseAnimation,
+  rotateAnimation,
+  floatingAnimation
+} from '@/animations/quiz-animations';
+
+// Lazy loading for heavy components
 import { WelcomeScreenSkeleton, QuestionScreenSkeleton, ResultScreenSkeleton } from '@/components/ui/quiz-skeletons';
 import { LoadingOverlay, TransitionLoader } from '@/components/ui/loading-animations';
 import { ResultCalculationLoader } from '@/components/ui/result-calculation-loader';
 
-interface Question {
-  id: number;
-  question: string;
-  options: {
-    text: string;
-    track: 'webdev' | 'javadsa' | 'python';
-    emoji: string;
-  }[];
-}
-
-interface CourseRecommendation {
-  id: string;
-  title: string;
-  description: string;
-  level: string;
-  category: string;
-  track: 'webdev' | 'javadsa' | 'python';
-  price: number;
-  duration: string;
-  rating: number;
-  students_count: number;
-  instructor: string;
-  tags: string[];
-  features: string[];
-  topics: string[];
-  projects: string[];
-  career_outcomes: string[];
-  next_courses: string[];
-  emoji: string;
-  trackData?: any;
-  allCourses?: any[];
-  confidence?: number;
-  scores?: { webdev: number; javadsa: number; python: number };
-  alternativeTracks?: any[];
-}
-
 const CourseRecommendationQuiz = () => {
-  const [currentStep, setCurrentStep] = useState(0); // 0 = welcome, 1-7 = questions, 8 = result
-  const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [showAffirmation, setShowAffirmation] = useState(false);
+  const [currentStep, setCurrentStep] = useState<QuizStep>(QUIZ_CONFIG.WELCOME_STEP);
+  const [answers, setAnswers] = useState<AnswerRecord>({});
   const [recommendation, setRecommendation] = useState<CourseRecommendation | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [transitionType, setTransitionType] = useState<'processing' | 'calculating' | 'generating'>('processing');
-  const [isCalculatingResult, setIsCalculatingResult] = useState(false);
-  const [showFullTrack, setShowFullTrack] = useState(false);
+  const [uiState, setUiState] = useState<UIState>({
+    showAffirmation: false,
+    isAnimating: false,
+    isInitialLoading: true,
+    isTransitioning: false,
+    isCalculatingResult: false,
+    showFullTrack: false,
+    transitionType: 'processing' as 'processing' | 'calculating' | 'generating',
+    isProcessingChoice: false // New flag to prevent UI conflicts
+  });
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4 }
-    }
-  };
-
-  const cardHoverVariants = {
-    hover: { 
-      scale: 1.02,
-      y: -5,
-      transition: { duration: 0.2 }
-    }
-  };
-
-  const buttonVariants = {
-    hover: {
-      scale: 1.05,
-      transition: { duration: 0.2 }
-    },
-    tap: {
-      scale: 0.98
-    }
-  };
+  // Optimized animation variants
+  const containerVariants = useMemo(() => fadeInUp, []);
+  const itemVariants = useMemo(() => fadeInDown, []);
+  const cardHoverVariants = useMemo(() => hoverScale, []);
+  const buttonVariants = useMemo(() => buttonHover, []);
 
   // Handle initial loading
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsInitialLoading(false);
-    }, 1500); // Show skeleton for 1.5 seconds to ensure smooth loading experience
+      setUiState(prev => ({ ...prev, isInitialLoading: false }));
+    }, QUIZ_CONFIG.INITIAL_LOADING_DELAY); // Show skeleton for 1.5 seconds to ensure smooth loading experience
 
     return () => clearTimeout(timer);
   }, []);
 
   // Handle result calculation completion
-  const handleResultCalculationComplete = () => {
-    setIsCalculatingResult(false);
-    setCurrentStep(8);
-    setIsAnimating(false);
-  };
+  const handleResultCalculationComplete = useCallback(() => {
+    setUiState(prev => ({ 
+      ...prev, 
+      isCalculatingResult: false,
+      isAnimating: false 
+    }));
+    setCurrentStep(QUIZ_CONFIG.RESULT_STEP);
+  }, []);
 
-  const questions: Question[] = [
-    {
-      id: 1,
-      question: "Which of these sounds fun to you right now?",
-      options: [
-        { text: "Making websites or apps that people can actually use!", track: "webdev", emoji: "🌐" },
-        { text: "Solving tricky programming puzzles and challenges", track: "javadsa", emoji: "🧩" },
-        { text: "Playing with data, AI, or making smart programs", track: "python", emoji: "🤖" }
-      ]
-    },
-    {
-      id: 2,
-      question: "Imagine your dream job. Which one makes you go \"Wow!\"?",
-      options: [
-        { text: "Creating cool websites or apps that everyone talks about", track: "webdev", emoji: "🚀" },
-        { text: "Working in big tech companies like Google, Amazon, Microsoft, Meta, Apple", track: "javadsa", emoji: "🏢" },
-        { text: "Analyzing data or building AI/ML programs", track: "python", emoji: "🧠" }
-      ]
-    },
-    {
-      id: 3,
-      question: "Which projects would make you excited to wake up and code?",
-      options: [
-        { text: "Personal websites, online stores, or portfolio pages", track: "webdev", emoji: "💻" },
-        { text: "Algorithm problems, student record systems, or backend projects", track: "javadsa", emoji: "⚙️" },
-        { text: "Data analysis, automation scripts, or small AI models", track: "python", emoji: "📊" }
-      ]
-    },
-    {
-      id: 4,
-      question: "If you could pick a skill to master first, which one?",
-      options: [
-        { text: "HTML, CSS, JavaScript, React, Node.js", track: "webdev", emoji: "🎨" },
-        { text: "Problem-solving, algorithms, data structures", track: "javadsa", emoji: "🔍" },
-        { text: "Python, Pandas, NumPy, or machine learning basics", track: "python", emoji: "🐍" }
-      ]
-    },
-    {
-      id: 5,
-      question: "What makes you happy while learning tech?",
-      options: [
-        { text: "Seeing a website/app come alive on the screen", track: "webdev", emoji: "✨" },
-        { text: "Cracking a tough coding challenge", track: "javadsa", emoji: "💡" },
-        { text: "Turning messy data into something meaningful", track: "python", emoji: "🔄" }
-      ]
-    },
-    {
-      id: 6,
-      question: "How do you like to learn best?",
-      options: [
-        { text: "Hands-on, building things you can show off", track: "webdev", emoji: "🛠️" },
-        { text: "Step-by-step challenges and practice problems", track: "javadsa", emoji: "📝" },
-        { text: "Experimenting with data or small projects", track: "python", emoji: "🧪" }
-      ]
-    },
-    {
-      id: 7,
-      question: "What's your ultimate dream for the future?",
-      options: [
-        { text: "Build your own apps, startups, or online projects", track: "webdev", emoji: "🌟" },
-        { text: "Work in a big tech company", track: "javadsa", emoji: "🏆" },
-        { text: "Become an AI, ML, or data expert", track: "python", emoji: "🎯" }
-      ]
-    }
-  ];
-
-
-
-  const affirmations = {
-    webdev: ["Great choice! 🌟", "You're going to build amazing things! 🚀", "Web dev is so creative! 🎨"],
-    javadsa: ["Smart thinking! 💡", "You'll be a problem-solving master! 🧩", "Big tech, here you come! 🏢"],
-    python: ["Excellent pick! 🐍", "Data science is the future! 🚀", "AI magic awaits you! ✨"]
-  };
+  // Use imported data for better performance and maintainability
+  const questions = useMemo(() => QUIZ_QUESTIONS, []);
 
   const handleAnswer = (questionId: number, optionIndex: number) => {
-    setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+    // Prevent multiple clicks and UI conflicts
+    if (uiState.isProcessingChoice || uiState.isTransitioning) return;
     
-    // Show processing animation
-    setTransitionType('processing');
-    setIsTransitioning(true);
+    // Set processing state immediately to lock UI
+    setUiState(prev => ({ 
+      ...prev, 
+      isProcessingChoice: true,
+      transitionType: 'processing'
+    }));
     
-    // Show affirmation
-    setShowAffirmation(true);
-    const selectedOption = questions[questionId - 1].options[optionIndex];
-    
-    // 1.2 second delay for processing each question
+    // Update answer in next tick to avoid render conflicts
     setTimeout(() => {
-      setShowAffirmation(false);
-      setIsTransitioning(false);
-      handleNext();
-    }, 1200);
+      setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+      
+      // Show affirmation after answer is set
+      setUiState(prev => ({ 
+        ...prev, 
+        showAffirmation: true,
+        isTransitioning: true
+      }));
+      
+      // Handle transition to next question
+      setTimeout(() => {
+        setUiState(prev => ({ 
+          ...prev, 
+          showAffirmation: false,
+          isTransitioning: false
+        }));
+        
+        // Proceed to next question after affirmation is hidden
+        setTimeout(() => {
+          handleNext();
+          setUiState(prev => ({ 
+            ...prev, 
+            isProcessingChoice: false
+          }));
+        }, 150);
+      }, QUIZ_CONFIG.AFFIRMATION_DURATION);
+    }, 50);
   };
 
-  const handleNext = () => {
-    if (currentStep < 8) {
-      setIsAnimating(true);
-      
-      // Show calculating animation for the last question
-      if (currentStep === 7) {
-        setIsCalculatingResult(true);
+  const handleNext = useCallback(() => {
+    if (currentStep < QUIZ_CONFIG.RESULT_STEP) {
+      // For the last question, handle result calculation
+      if (currentStep === QUIZ_CONFIG.TOTAL_QUESTIONS) {
+        setUiState(prev => ({ 
+          ...prev, 
+          isCalculatingResult: true,
+          isAnimating: false 
+        }));
         setTimeout(() => {
           setCurrentStep(prev => prev + 1);
-          setIsAnimating(false);
         }, 300);
       } else {
+        // For all other questions, smooth transition
         setTimeout(() => {
           setCurrentStep(prev => prev + 1);
-          setIsAnimating(false);
-        }, 300);
+          setUiState(prev => ({ ...prev, isAnimating: false }));
+        }, QUIZ_CONFIG.TRANSITION_DELAY);
       }
     }
-  };
+  }, [currentStep]);
 
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setIsAnimating(true);
+  const handlePrevious = useCallback(() => {
+    if (currentStep > QUIZ_CONFIG.WELCOME_STEP) {
+      setUiState(prev => ({ ...prev, isAnimating: true }));
       setTimeout(() => {
         setCurrentStep(prev => prev - 1);
-        setIsAnimating(false);
+        setUiState(prev => ({ ...prev, isAnimating: false }));
       }, 300);
     }
-  };
+  }, [currentStep]);
 
-  const calculateRecommendation = () => {
-    const scores: { webdev: number; javadsa: number; python: number } = { webdev: 0, javadsa: 0, python: 0 };
-    const experienceLevel = answers[1]; // Experience level (0: beginner, 1: some exp, 2: experienced)
-    const goalType = answers[6]; // Career goals
-    const projectType = answers[4]; // Project preference
-    
-    // Enhanced scoring with weights
-    Object.entries(answers).forEach(([questionId, optionIndex]) => {
-      const questionIndex = parseInt(questionId) - 1;
-      const question = questions[questionIndex];
-      const selectedOption = question.options[optionIndex];
-      
-      // Apply different weights to different questions
-      let weight = 1;
-      if (questionIndex === 0) weight = 2.5; // Programming interest (highest weight)
-      if (questionIndex === 4) weight = 2; // Project type preference
-      if (questionIndex === 6) weight = 1.8; // Career goals
-      if (questionIndex === 2) weight = 1.5; // Problem-solving approach
-      if (questionIndex === 3) weight = 1.3; // Learning style
-      
-      scores[selectedOption.track] += weight;
-    });
-
-    // Find the track with highest score
-    const topTrack = (Object.entries(scores) as [keyof typeof scores, number][])
-      .reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b)[0];
-    
-    // Get course data for the recommended track
-    const trackData = coursesData.learning_tracks[topTrack];
-    const trackCourses = coursesData.courses.filter(course => course.track === topTrack);
-    
-    // Determine appropriate starting course based on experience level
-    let recommendedCourse;
-    if (experienceLevel === 0) { // Complete beginner
-      recommendedCourse = trackCourses.find(course => course.level === 'beginner');
-    } else if (experienceLevel === 1) { // Some experience
-      recommendedCourse = trackCourses.find(course => course.level === 'intermediate') || 
-                         trackCourses.find(course => course.level === 'beginner');
-    } else { // Experienced
-      recommendedCourse = trackCourses.find(course => course.level === 'advanced') || 
-                         trackCourses.find(course => course.level === 'intermediate');
-    }
-    
-    // Calculate confidence score based on answer consistency
-    const totalAnswers = Object.keys(answers).length;
-    const maxScore = Math.max(...Object.values(scores));
-    const avgScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / 3;
-    const confidence = Math.min(Math.round((maxScore / (totalAnswers * 2.5)) * 100), 97);
-    
-    // Ensure we have a valid course
-    if (!recommendedCourse) {
-      recommendedCourse = trackCourses[0]; // Fallback to first course in track
-    }
-
-    // Create enhanced recommendation object
-    return {
-      ...recommendedCourse,
-      trackData,
-      allCourses: trackCourses,
-      confidence,
-      scores,
-      alternativeTracks: Object.entries(scores)
-        .sort(([,a], [,b]) => b - a)
-        .slice(1)
-        .map(([track]) => ({
-          track,
-          data: coursesData.learning_tracks[track as keyof typeof coursesData.learning_tracks],
-          courses: coursesData.courses.filter(course => course.track === track)
-        }))
-    } as CourseRecommendation;
-  };
+  // Memoized calculation for better performance
+  const memoizedCalculateRecommendation = useCallback(() => {
+    return calculateRecommendation(answers);
+  }, [answers]);
 
   useEffect(() => {
-    if (currentStep === 8 && !recommendation && !isCalculatingResult) {
-      setIsCalculatingResult(true);
+    if (currentStep === QUIZ_CONFIG.RESULT_STEP && !recommendation && !uiState.isCalculatingResult) {
+      setUiState(prev => ({ ...prev, isCalculatingResult: true }));
       // 4.8 second delay for compiling all questions and answers
       setTimeout(() => {
-        const result = calculateRecommendation();
+        const result = memoizedCalculateRecommendation();
         setRecommendation(result);
-        setIsCalculatingResult(false);
-      }, 4800);
+        setUiState(prev => ({ ...prev, isCalculatingResult: false }));
+      }, QUIZ_CONFIG.CALCULATION_DURATION);
     }
-  }, [currentStep, recommendation, isCalculatingResult]);
+  }, [currentStep, recommendation, uiState.isCalculatingResult, calculateRecommendation]);
 
   const WelcomeScreen = () => (
     <motion.div 
@@ -470,7 +311,7 @@ const CourseRecommendationQuiz = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.1 * index + 0.6 }}
-                >
+                >?tab=repositories
                   {item.title}
                 </motion.h3>
                 <motion.p 
@@ -514,31 +355,14 @@ const CourseRecommendationQuiz = () => {
   const QuestionScreen = () => {
     const currentQuestion = questions[currentStep - 1];
     
-    const getTrackIcon = (track: string) => {
-      switch (track) {
-        case 'webdev': return <Globe className="w-5 h-5" />;
-        case 'javadsa': return <Cpu className="w-5 h-5" />;
-        case 'python': return <Bot className="w-5 h-5" />;
-        default: return <Code className="w-5 h-5" />;
-      }
-    };
-
-    const getTrackGradient = (track: string) => {
-      const gradients = {
-        webdev: { bg: 'from-green-500 to-teal-600', text: 'text-green-300', border: 'border-green-400/30' },
-        javadsa: { bg: 'from-orange-500 to-red-600', text: 'text-orange-300', border: 'border-orange-400/30' },
-        python: { bg: 'from-blue-500 to-purple-600', text: 'text-blue-300', border: 'border-blue-400/30' }
-      };
-      return gradients[track as keyof typeof gradients] || { bg: 'from-gray-500 to-gray-600', text: 'text-gray-300', border: 'border-gray-400/30' };
-    };
-    
     return (
       <motion.div 
         className="flex items-center justify-center min-h-[80vh] px-4"
         initial="hidden"
         animate="visible"
+        exit={{ opacity: 0, scale: 0.95 }}
         variants={containerVariants}
-        key={currentStep} // Re-trigger animation on step change
+        key={`question-screen-${currentStep}`}
       >
         <motion.div className="max-w-5xl w-full" variants={itemVariants}>
           
@@ -746,13 +570,14 @@ const CourseRecommendationQuiz = () => {
                     <motion.button
                       key={index}
                       onClick={() => handleAnswer(currentQuestion.id, index)}
-                      className="group w-full p-6 text-left bg-gradient-to-r from-gray-800/50 to-gray-700/50 hover:from-gray-700/70 hover:to-gray-600/70 border border-gray-600/50 hover:border-cyan-500/50 rounded-xl transition-all duration-300 backdrop-blur-sm cursor-pointer"
+                      disabled={uiState.isTransitioning || uiState.showAffirmation || uiState.isProcessingChoice}
+                      className="group w-full p-6 text-left bg-gradient-to-r from-gray-800/50 to-gray-700/50 hover:from-gray-700/70 hover:to-gray-600/70 border border-gray-600/50 hover:border-cyan-500/50 rounded-xl transition-all duration-300 backdrop-blur-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-gray-800/50 disabled:hover:to-gray-700/50"
                       variants={itemVariants}
-                      whileHover={{ 
+                      whileHover={!uiState.isTransitioning && !uiState.showAffirmation && !uiState.isProcessingChoice ? { 
                         scale: 1.02, 
                         boxShadow: "0 10px 30px rgba(6, 182, 212, 0.1)" 
-                      }}
-                      whileTap={{ scale: 0.98 }}
+                      } : {}}
+                      whileTap={!uiState.isTransitioning && !uiState.showAffirmation && !uiState.isProcessingChoice ? { scale: 0.98 } : {}}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * index + 0.4 }}
@@ -1340,9 +1165,19 @@ const CourseRecommendationQuiz = () => {
                 
                 <motion.button 
                   onClick={() => {
-                    setCurrentStep(0);
+                    setCurrentStep(QUIZ_CONFIG.WELCOME_STEP);
                     setAnswers({});
                     setRecommendation(null);
+                    setUiState({
+                      showAffirmation: false,
+                      isAnimating: false,
+                      isInitialLoading: false,
+                      isTransitioning: false,
+                      isCalculatingResult: false,
+                      showFullTrack: false,
+                      transitionType: 'processing',
+                      isProcessingChoice: false
+                    });
                   }}
                   className="group border-2 border-gray-600 hover:border-cyan-500 text-gray-300 hover:text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center gap-3 backdrop-blur-sm cursor-pointer"
                   variants={itemVariants}
@@ -1380,33 +1215,29 @@ const CourseRecommendationQuiz = () => {
   };
 
   const AffirmationOverlay = () => {
-    if (!showAffirmation || currentStep === 0 || currentStep > 7) return null;
+    if (!uiState.showAffirmation || currentStep === QUIZ_CONFIG.WELCOME_STEP || currentStep > QUIZ_CONFIG.TOTAL_QUESTIONS) return null;
     
     const currentQuestion = questions[currentStep - 1];
     const selectedOption = currentQuestion.options[answers[currentStep]];
-    const affirmationTexts = affirmations[selectedOption?.track] || ["Great choice! 🌟"];
-    const randomAffirmation = affirmationTexts[Math.floor(Math.random() * affirmationTexts.length)];
-
-    const getTrackGradient = (track: string) => {
-      switch (track) {
-        case 'webdev': return 'from-green-500 to-blue-500';
-        case 'javadsa': return 'from-purple-500 to-pink-500';  
-        case 'python': return 'from-yellow-500 to-red-500';
-        default: return 'from-[#051C7F] to-[#EB8216]';
-      }
-    };
+    const randomAffirmation = getRandomAffirmation(selectedOption?.track || TRACK_TYPES.WEBDEV);
 
     return (
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <motion.div 
+        className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      >
         <div className="relative">
           {/* Glow Effect */}
-          <div className={`absolute inset-0 bg-gradient-to-r ${getTrackGradient(selectedOption?.track)} rounded-3xl blur-xl opacity-30 animate-pulse scale-110`}></div>
+          <div className={`absolute inset-0 bg-gradient-to-r ${getAffirmationGradient(selectedOption?.track || TRACK_TYPES.WEBDEV)} rounded-3xl blur-xl opacity-30 animate-pulse scale-110`}></div>
           
           {/* Main Card */}
           <div className="relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-3xl p-10 max-w-lg mx-auto text-center border border-white/20 shadow-2xl">
             {/* Success Icon */}
             <div className="relative mb-6">
-              <div className={`w-20 h-20 bg-gradient-to-r ${getTrackGradient(selectedOption?.track)} rounded-2xl flex items-center justify-center mx-auto shadow-2xl animate-bounce`}>
+              <div className={`w-20 h-20 bg-gradient-to-r ${getAffirmationGradient(selectedOption?.track || TRACK_TYPES.WEBDEV)} rounded-2xl flex items-center justify-center mx-auto shadow-2xl animate-bounce`}>
                 <span className="text-4xl">{selectedOption?.emoji}</span>
               </div>
               <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#EB8216] rounded-full flex items-center justify-center animate-ping">
@@ -1421,7 +1252,7 @@ const CourseRecommendationQuiz = () => {
             
             {/* Track Indicator */}
             <div className="flex items-center justify-center gap-2 mb-4">
-              <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${getTrackGradient(selectedOption?.track)} animate-pulse`}></div>
+              <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${getAffirmationGradient(selectedOption?.track || TRACK_TYPES.WEBDEV)} animate-pulse`}></div>
               <span className="text-lg font-semibold text-gray-300 capitalize">
                 {selectedOption?.track === 'javadsa' ? 'Java DSA' : selectedOption?.track === 'webdev' ? 'Web Development' : 'Python'} Track
               </span>
@@ -1438,7 +1269,7 @@ const CourseRecommendationQuiz = () => {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -1479,35 +1310,45 @@ const CourseRecommendationQuiz = () => {
         
         {/* Main Content */}
         <main className="flex-1 relative">
-          {isInitialLoading ? (
-            // Show skeleton loaders during initial load
-            <>
-              {currentStep === 0 && <WelcomeScreenSkeleton />}
-              {currentStep >= 1 && currentStep <= 7 && <QuestionScreenSkeleton />}
-              {currentStep === 8 && <ResultScreenSkeleton />}
-            </>
-          ) : (
-            // Show actual content after loading
-            <>
-              {currentStep === 0 && <WelcomeScreen />}
-              {currentStep >= 1 && currentStep <= 7 && <QuestionScreen />}
-              {currentStep === 8 && <ResultScreen />}
-            </>
-          )}
+          <AnimatePresence mode="wait">
+            {uiState.isInitialLoading ? (
+              // Show skeleton loaders during initial load
+              <motion.div key="loading" exit={{ opacity: 0 }}>
+                {currentStep === QUIZ_CONFIG.WELCOME_STEP && <WelcomeScreenSkeleton />}
+                {currentStep >= 1 && currentStep <= QUIZ_CONFIG.TOTAL_QUESTIONS && <QuestionScreenSkeleton />}
+                {currentStep === QUIZ_CONFIG.RESULT_STEP && <ResultScreenSkeleton />}
+              </motion.div>
+            ) : (
+              // Show actual content after loading
+              <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {currentStep === QUIZ_CONFIG.WELCOME_STEP && <WelcomeScreen />}
+                {currentStep >= 1 && currentStep <= QUIZ_CONFIG.TOTAL_QUESTIONS && <QuestionScreen key={`question-${currentStep}`} />}
+                {currentStep === QUIZ_CONFIG.RESULT_STEP && <ResultScreen />}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
       </div>
 
       {/* Enhanced Affirmation Overlay */}
-      <AffirmationOverlay />
+      <AnimatePresence>
+        {uiState.showAffirmation && <AffirmationOverlay />}
+      </AnimatePresence>
       
       {/* Transition Loading Animations */}
-      <TransitionLoader isVisible={isTransitioning} type={transitionType} />
+      <AnimatePresence>
+        {uiState.isTransitioning && <TransitionLoader isVisible={uiState.isTransitioning} type={uiState.transitionType} />}
+      </AnimatePresence>
       
       {/* Result Calculation Loader */}
-      <ResultCalculationLoader 
-        isVisible={isCalculatingResult} 
-        onComplete={handleResultCalculationComplete}
-      />
+      <AnimatePresence>
+        {uiState.isCalculatingResult && (
+          <ResultCalculationLoader 
+            isVisible={uiState.isCalculatingResult} 
+            onComplete={handleResultCalculationComplete}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
