@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ChevronRight, 
   Star, 
   Trophy, 
   Clock, 
@@ -13,48 +12,30 @@ import {
   Rocket, 
   ArrowRight, 
   Sparkles, 
-  Terminal, 
-  Code, 
-  Globe, 
-  Cpu, 
   Bot, 
   GitBranch, 
   ArrowLeft,
   Zap,
-  Hash,
   RotateCcw,
-  CheckCircle,
-  BookOpen,
-  Award,
-  MapPin,
-  Eye,
-  ChevronDown,
-  ChevronUp
+  CheckCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
 // Optimized imports
-import { QUIZ_CONFIG, TRACK_DETAILS, AFFIRMATIONS, TRACK_TYPES } from '@/constants/quiz';
-import { Question, CourseRecommendation, UIState, QuizStep, AnswerRecord } from '@/types/quiz';
+import { QUIZ_CONFIG, TRACK_TYPES } from '@/constants/quiz';
+import { CourseRecommendation, UIState, QuizStep, AnswerRecord } from '@/types/quiz';
 import { QUIZ_QUESTIONS } from '@/data/quiz-questions';
 import { calculateRecommendation, getRandomAffirmation } from '@/utils/quiz-calculator';
-import { getTrackIcon, getTrackDetails, getTrackGradient, getAffirmationGradient } from '@/utils/track-utils';
+import { getTrackIcon, getTrackGradient, getAffirmationGradient } from '@/utils/track-utils';
 import { 
   fadeInUp, 
   fadeInDown, 
-  scaleIn, 
-  slideInFromLeft, 
-  slideInFromRight,
-  hoverScale,
-  buttonHover,
-  pulseAnimation,
-  rotateAnimation,
-  floatingAnimation
+  buttonHover
 } from '@/animations/quiz-animations';
 
 // Lazy loading for heavy components
 import { WelcomeScreenSkeleton, QuestionScreenSkeleton, ResultScreenSkeleton } from '@/components/ui/quiz-skeletons';
-import { LoadingOverlay, TransitionLoader } from '@/components/ui/loading-animations';
+import { TransitionLoader } from '@/components/ui/loading-animations';
 import { ResultCalculationLoader } from '@/components/ui/result-calculation-loader';
 
 const CourseRecommendationQuiz = () => {
@@ -75,7 +56,6 @@ const CourseRecommendationQuiz = () => {
   // Optimized animation variants
   const containerVariants = useMemo(() => fadeInUp, []);
   const itemVariants = useMemo(() => fadeInDown, []);
-  const cardHoverVariants = useMemo(() => hoverScale, []);
   const buttonVariants = useMemo(() => buttonHover, []);
 
   // Handle initial loading
@@ -189,7 +169,7 @@ const CourseRecommendationQuiz = () => {
         setUiState(prev => ({ ...prev, isCalculatingResult: false }));
       }, QUIZ_CONFIG.CALCULATION_DURATION);
     }
-  }, [currentStep, recommendation, uiState.isCalculatingResult, calculateRecommendation]);
+  }, [currentStep, recommendation, uiState.isCalculatingResult, memoizedCalculateRecommendation]);
 
   const WelcomeScreen = () => (
     <motion.div 

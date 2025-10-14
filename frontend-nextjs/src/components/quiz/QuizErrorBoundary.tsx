@@ -54,7 +54,7 @@ class QuizErrorBoundary extends Component<Props, State> {
             </h2>
             
             <p className="text-gray-400 mb-6">
-              Don't worry, this happens sometimes. You can try refreshing the page or starting the quiz again.
+              Don&apos;t worry, this happens sometimes. You can try refreshing the page or starting the quiz again.
             </p>
             
             {process.env.NODE_ENV === 'development' && this.state.error && (

@@ -203,9 +203,9 @@ export const authConfig: NextAuthConfig = {
       // Initial sign in
       if (account && user) {
         token.sub = user.id;
-        token.userType = (user as any).userType as UserType;
-        token.accessToken = (user as any).accessToken;
-        token.emailVerificationRequired = (user as any).emailVerificationRequired;
+        token.userType = user.userType as UserType;
+        token.accessToken = user.accessToken;
+        token.emailVerificationRequired = user.emailVerificationRequired;
         token.email = user.email;
       }
       
@@ -215,9 +215,9 @@ export const authConfig: NextAuthConfig = {
       const { session, token } = params;
       if (token && session.user) {
         session.user.id = (token.sub as string) || '';
-        (session.user as any).userType = token.userType as UserType;
-        (session.user as any).accessToken = token.accessToken as string;
-        (session.user as any).emailVerificationRequired = token.emailVerificationRequired as boolean;
+        session.user.userType = token.userType as UserType;
+        session.user.accessToken = token.accessToken as string;
+        session.user.emailVerificationRequired = token.emailVerificationRequired as boolean;
         session.user.email = token.email as string;
       }
       return session;

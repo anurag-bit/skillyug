@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/hooks/AuthContext";
 import Navbar from "@/components/Navbar";
 import { formatIndianCurrency, paymentAPI, courseAPI, loadRazorpayScript } from "@/lib/api";
@@ -18,9 +19,44 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 
 // Razorpay types
+interface RazorpayResponse {
+	razorpay_payment_id: string;
+	razorpay_order_id: string;
+	razorpay_signature: string;
+	[key: string]: unknown;
+}
+
+interface RazorpayOptions {
+	key: string;
+	amount: number;
+	currency: string;
+	name: string;
+	description?: string;
+	order_id: string;
+	prefill: {
+		name: string;
+		email: string;
+	};
+	theme: {
+		color: string;
+	};
+	handler: (response: RazorpayResponse) => Promise<void>;
+	modal: {
+		ondismiss: () => void;
+	};
+}
+
+interface RazorpayInstance {
+	open(): void;
+}
+
+interface RazorpayConstructor {
+	new (options: RazorpayOptions): RazorpayInstance;
+}
+
 declare global {
 	interface Window {
-		Razorpay: any;
+		Razorpay: RazorpayConstructor;
 	}
 }
 
@@ -35,7 +71,7 @@ interface Course {
 	durationHours?: number;
 }
 
-export default function PaymentPage() {
+function PaymentPageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { user, loading: authLoading } = useAuth();
@@ -98,7 +134,7 @@ export default function PaymentPage() {
 			setError("Missing payment information. Please select a course to proceed.");
 			setLoading(false);
 		}
-	}, [hasRequiredParams, user, authLoading, loadPaymentData]);
+	}, [hasRequiredParams, user, authLoading, loadPaymentData, router]);
 
 	const handlePayment = async () => {
 		if (!paymentConfig || !course || !user) return;
@@ -132,7 +168,7 @@ export default function PaymentPage() {
 				theme: {
 					color: "#EB8216",
 				},
-				handler: async (response: any) => {
+				handler: async (response: RazorpayResponse) => {
 					try {
 						// Verify payment
 						await paymentAPI.verifyPayment({
@@ -247,9 +283,11 @@ export default function PaymentPage() {
 
 								{course.imageUrl && (
 									<div className="h-48 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg mb-4 flex items-center justify-center">
-										<img
+										<Image
 											src={course.imageUrl}
 											alt={course.courseName}
+											width={400}
+											height={192}
 											className="w-full h-full object-cover rounded-lg"
 										/>
 									</div>
@@ -367,5 +405,13 @@ export default function PaymentPage() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function PaymentPage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<PaymentPageContent />
+		</Suspense>
 	);
 }

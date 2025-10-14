@@ -26,7 +26,6 @@ const SignUp = () => {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isValid }
   } = useForm<SignUpFormData>({ // Use the inferred type here
     resolver: zodResolver(signupSchema),
@@ -40,8 +39,6 @@ const SignUp = () => {
       agreeToTerms: false,
     }
   });
-
-  const watchUserType = watch('userType');
 
   // --- THIS IS THE CORRECTED FUNCTION ---
   const onSubmit = async (formData: SignUpFormData) => {

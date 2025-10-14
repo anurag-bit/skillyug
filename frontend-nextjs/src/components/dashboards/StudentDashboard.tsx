@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import { useAuth } from "../hooks/AuthContext";
+import { useAuth } from "../../hooks/AuthContext";
 import { LogOut, Book, Gamepad, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 

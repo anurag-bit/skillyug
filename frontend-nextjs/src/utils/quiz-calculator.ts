@@ -1,5 +1,5 @@
 import { AnswerRecord, CourseRecommendation } from '@/types/quiz';
-import { TRACK_TYPES, WEIGHT_CONFIG } from '@/constants/quiz';
+import { WEIGHT_CONFIG, AFFIRMATIONS } from '@/constants/quiz';
 import { QUIZ_QUESTIONS } from '@/data/quiz-questions';
 import coursesData from '@/data/courses.json';
 
@@ -11,8 +11,6 @@ export const calculateRecommendation = (answers: AnswerRecord): CourseRecommenda
   };
   
   const experienceLevel = answers[1]; // Experience level (0: beginner, 1: some exp, 2: experienced)
-  const goalType = answers[6]; // Career goals
-  const projectType = answers[4]; // Project preference
   
   // Enhanced scoring with weights
   Object.entries(answers).forEach(([questionId, optionIndex]) => {
@@ -54,7 +52,6 @@ export const calculateRecommendation = (answers: AnswerRecord): CourseRecommenda
   // Calculate confidence score based on answer consistency
   const totalAnswers = Object.keys(answers).length;
   const maxScore = Math.max(...Object.values(scores));
-  const avgScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / 3;
   const confidence = Math.min(Math.round((maxScore / (totalAnswers * 2.5)) * 100), 97);
   
   // Ensure we have a valid course
@@ -81,7 +78,7 @@ export const calculateRecommendation = (answers: AnswerRecord): CourseRecommenda
 };
 
 export const getRandomAffirmation = (track: string): string => {
-  const trackKey = track as keyof typeof import('@/constants/quiz').AFFIRMATIONS;
-  const affirmations = require('@/constants/quiz').AFFIRMATIONS[trackKey] || ["Great choice! 🌟"];
+  const trackKey = track as keyof typeof AFFIRMATIONS;
+  const affirmations = AFFIRMATIONS[trackKey] || ["Great choice! 🌟"];
   return affirmations[Math.floor(Math.random() * affirmations.length)];
 };

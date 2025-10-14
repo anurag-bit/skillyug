@@ -33,9 +33,31 @@ class ApiError extends Error {
 	}
 }
 
+// Payment data interfaces
+interface PaymentSuccessData {
+	razorpay_payment_id: string;
+	razorpay_order_id: string;
+	razorpay_signature: string;
+	[key: string]: unknown;
+}
+
+interface PaymentErrorDetails {
+	error: string;
+	code?: string;
+	description?: string;
+	[key: string]: unknown;
+}
+
+// Extended user type for session
+interface SessionUser {
+	id: string;
+	userType: string;
+	accessToken?: string;
+	[key: string]: unknown;
+}
+
 // API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
 // Create axios instance with default config
 const createApiInstance = (): AxiosInstance => {
@@ -59,7 +81,7 @@ const createApiInstance = (): AxiosInstance => {
 					config.headers["X-User-ID"] = session.user.id;
 					config.headers["X-User-Type"] = session.user.userType;
 					
-					const accessToken = (session.user as any).accessToken;
+					const accessToken = (session.user as SessionUser).accessToken;
 					if (accessToken) {
 						config.headers.Authorization = `Bearer ${accessToken}`;
 					} 
@@ -407,14 +429,14 @@ export const paymentAPI = {
 		return apiHelpers.post(API_ENDPOINTS.PAYMENTS.VERIFY, paymentData);
 	},
 
-	processSuccess: async (courseId: string, paymentData: any): Promise<ApiResponse> => {
+	processSuccess: async (courseId: string, paymentData: PaymentSuccessData): Promise<ApiResponse> => {
 		return apiHelpers.post(API_ENDPOINTS.PAYMENTS.PROCESS_SUCCESS, {
 			courseId,
 			paymentData,
 		});
 	},
 
-	handleFailure: async (courseId: string, errorDetails: any): Promise<ApiResponse> => {
+	handleFailure: async (courseId: string, errorDetails: PaymentErrorDetails): Promise<ApiResponse> => {
 		return apiHelpers.post(API_ENDPOINTS.PAYMENTS.HANDLE_FAILURE, {
 			courseId,
 			errorDetails,

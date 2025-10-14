@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '../../hooks/AuthContext';
 import Navbar from '../../components/Navbar';
 import { BookOpen, Clock, Users, Star, Filter, Search, Sparkles } from 'lucide-react';
@@ -61,7 +62,7 @@ export default function Courses() {
     };
 
     fetchCourses();
-  }, []);
+  }, [router]);
 
   // Filter courses based on search term, category, and difficulty
   useEffect(() => {
@@ -88,7 +89,7 @@ export default function Courses() {
     setFilteredCourses(filtered);
   }, [courses, searchTerm, selectedCategory, selectedDifficulty]);
 
-  const handleEnrollClick = (course: any) => {
+  const handleEnrollClick = (course: Course) => {
     if (!user) {
       toast.error('Please login to enroll in courses');
       router.push('/login?redirect=' + encodeURIComponent(`/payment?courseId=${course.id}&amount=${course.price}`));
@@ -183,9 +184,11 @@ export default function Courses() {
 										>
 											<div className="h-48 bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
 												{course.imageUrl ? (
-													<img
+													<Image
 														src={course.imageUrl}
 														alt={course.courseName}
+														width={400}
+														height={192}
 														className="w-full h-full object-cover"
 													/>
 												) : (

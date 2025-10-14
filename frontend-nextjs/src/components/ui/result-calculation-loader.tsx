@@ -15,36 +15,36 @@ interface ResultCalculationLoaderProps {
   onComplete: () => void;
 }
 
+const CALCULATION_STEPS: CalculationStep[] = [
+  {
+    id: 'analyzing',
+    label: 'Analyzing your preferences',
+    icon: <Bot className="w-5 h-5" />,
+    duration: 800
+  },
+  {
+    id: 'matching',
+    label: 'Finding perfect matches',
+    icon: <Target className="w-5 h-5" />,
+    duration: 1000
+  },
+  {
+    id: 'personalizing',
+    label: 'Personalizing recommendations',
+    icon: <Sparkles className="w-5 h-5" />,
+    duration: 700
+  },
+  {
+    id: 'generating',
+    label: 'Generating your learning path',
+    icon: <Zap className="w-5 h-5" />,
+    duration: 900
+  }
+];
+
 export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalculationLoaderProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
-
-  const steps: CalculationStep[] = [
-    {
-      id: 'analyzing',
-      label: 'Analyzing your preferences',
-      icon: <Bot className="w-5 h-5" />,
-      duration: 800
-    },
-    {
-      id: 'matching',
-      label: 'Finding perfect matches',
-      icon: <Target className="w-5 h-5" />,
-      duration: 1000
-    },
-    {
-      id: 'personalizing',
-      label: 'Personalizing recommendations',
-      icon: <Sparkles className="w-5 h-5" />,
-      duration: 700
-    },
-    {
-      id: 'generating',
-      label: 'Generating your learning path',
-      icon: <Zap className="w-5 h-5" />,
-      duration: 900
-    }
-  ];
 
   useEffect(() => {
     if (!isVisible) {
@@ -53,17 +53,17 @@ export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalcula
       return;
     }
 
-    let timeouts: NodeJS.Timeout[] = [];
+    const timeouts: NodeJS.Timeout[] = [];
     let totalDelay = 0;
 
-    steps.forEach((step, index) => {
+    CALCULATION_STEPS.forEach((step, index) => {
       const timeout = setTimeout(() => {
         setCurrentStep(index);
         
         const completeTimeout = setTimeout(() => {
           setCompletedSteps(prev => new Set([...prev, step.id]));
           
-          if (index === steps.length - 1) {
+          if (index === CALCULATION_STEPS.length - 1) {
             setTimeout(() => {
               onComplete();
             }, 500);
@@ -103,10 +103,9 @@ export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalcula
 
         {/* Progress Steps */}
         <div className="space-y-4">
-          {steps.map((step, index) => {
+          {CALCULATION_STEPS.map((step, index) => {
             const isActive = currentStep === index;
             const isCompleted = completedSteps.has(step.id);
-            const isPending = currentStep < index;
 
             return (
               <div 
@@ -155,12 +154,12 @@ export function ResultCalculationLoader({ isVisible, onComplete }: ResultCalcula
         <div className="mt-6">
           <div className="flex justify-between text-sm text-gray-600 mb-2">
             <span>Progress</span>
-            <span>{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
+            <span>{Math.round(((currentStep + 1) / CALCULATION_STEPS.length) * 100)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-[#051C7F] to-[#EB8216] rounded-full transition-all duration-700 ease-out"
-              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+              style={{ width: `${((currentStep + 1) / CALCULATION_STEPS.length) * 100}%` }}
             />
           </div>
         </div>

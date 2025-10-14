@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/hooks/AuthContext";
 import Navbar from "@/components/Navbar";
 import { XCircle, RefreshCw, HelpCircle, ArrowLeft, Home, MessageCircle } from "lucide-react";
@@ -14,7 +15,7 @@ interface Course {
 	imageUrl?: string;
 }
 
-export default function PaymentFailurePage() {
+function PaymentFailureContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { user } = useAuth();
@@ -25,6 +26,20 @@ export default function PaymentFailurePage() {
 	const courseId = searchParams?.get("courseId");
 	const errorCode = searchParams?.get("error");
 	const errorDescription = searchParams?.get("description");
+
+	const loadCourseDetails = useCallback(async () => {
+		try {
+			const response = await fetch(`/api/courses/${courseId}`);
+			if (response.ok) {
+				const data = await response.json();
+				setCourse(data.data);
+			}
+		} catch (error) {
+			console.error("Error loading course:", error);
+		} finally {
+			setLoading(false);
+		}
+	}, [courseId]);
 
 	useEffect(() => {
 		if (!user) {
@@ -37,21 +52,7 @@ export default function PaymentFailurePage() {
 		} else {
 			setLoading(false);
 		}
-	}, [courseId, user]);
-
-	const loadCourseDetails = async () => {
-		try {
-			const response = await fetch(`/api/courses/${courseId}`);
-			if (response.ok) {
-				const data = await response.json();
-				setCourse(data.data);
-			}
-		} catch (error) {
-			console.error("Error loading course:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
+	}, [courseId, user, router, loadCourseDetails]);
 
 	const getErrorMessage = () => {
 		switch (errorCode) {
@@ -124,9 +125,11 @@ export default function PaymentFailurePage() {
 							<div className="flex flex-col md:flex-row items-center space-y-6 md:space-y-0 md:space-x-8">
 								<div className="flex-shrink-0">
 									{course.imageUrl ? (
-										<img
+										<Image
 											src={course.imageUrl}
 											alt={course.courseName}
+											width={128}
+											height={128}
 											className="w-32 h-32 object-cover rounded-lg"
 										/>
 									) : (
@@ -139,7 +142,7 @@ export default function PaymentFailurePage() {
 								<div className="flex-1 text-center md:text-left">
 									<h2 className="text-2xl font-bold text-white mb-2">{course.courseName}</h2>
 									<p className="text-gray-300 mb-4">
-										Don't worry! Your course selection is still available. You can retry the payment
+										Don&apos;t worry! Your course selection is still available. You can retry the payment
 										anytime.
 									</p>
 									<div className="text-2xl font-bold" style={{ color: "#EB8216" }}>
@@ -246,5 +249,13 @@ export default function PaymentFailurePage() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function PaymentFailurePage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<PaymentFailureContent />
+		</Suspense>
 	);
 }

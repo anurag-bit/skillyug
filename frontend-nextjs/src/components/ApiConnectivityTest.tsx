@@ -86,14 +86,14 @@ export default function ApiConnectivityTest({ className = '' }: ApiConnectivityT
       test: async () => {
         try {
           const startTime = Date.now();
-          const response = await paymentAPI.getRazorpayKey();
+          const response = await paymentAPI.getConfig();
           const responseTime = Date.now() - startTime;
           
-          if (response.key) {
+          if (response.data?.razorpayKey) {
             return {
               success: true,
               message: `Razorpay key retrieved successfully (${responseTime}ms)`,
-              data: { responseTime, hasKey: !!response.key },
+              data: { responseTime, hasKey: !!response.data.razorpayKey },
             };
           } else {
             return {

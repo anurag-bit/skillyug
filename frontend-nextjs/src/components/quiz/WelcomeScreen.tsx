@@ -4,9 +4,7 @@ import {
   Target, 
   TrendingUp, 
   Zap, 
-  Sparkles, 
-  Rocket,
-  ArrowRight
+  Sparkles
 } from 'lucide-react';
 import { fadeInUp, fadeInDown, buttonHover } from '@/animations/quiz-animations';
 

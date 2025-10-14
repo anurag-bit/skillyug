@@ -10,7 +10,7 @@ export interface Question {
   }[];
 }
 
-export interface CourseRecommendation {
+export interface Course {
   id: string;
   title: string;
   description: string;
@@ -29,11 +29,30 @@ export interface CourseRecommendation {
   career_outcomes: string[];
   next_courses: string[];
   emoji: string;
-  trackData?: any;
-  allCourses?: any[];
+}
+
+export interface TrackData {
+  name: string;
+  description: string;
+  emoji: string;
+  color: string;
+  total_duration: string;
+  career_paths: string[];
+  courses: string[];
+}
+
+export interface AlternativeTrack {
+  track: string;
+  data: TrackData;
+  courses: Course[];
+}
+
+export interface CourseRecommendation extends Course {
+  trackData?: TrackData;
+  allCourses?: Course[];
   confidence?: number;
   scores?: { webdev: number; javadsa: number; python: number };
-  alternativeTracks?: any[];
+  alternativeTracks?: AlternativeTrack[];
 }
 
 export interface UIState {

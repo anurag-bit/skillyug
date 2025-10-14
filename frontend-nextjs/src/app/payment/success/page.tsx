@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/hooks/AuthContext";
 import Navbar from "@/components/Navbar";
 import { CheckCircle, Download, PlayCircle, Book, ArrowRight, Home } from "lucide-react";
@@ -16,7 +17,7 @@ interface Course {
 	difficulty: string;
 }
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { user } = useAuth();
@@ -26,6 +27,20 @@ export default function PaymentSuccessPage() {
 
 	const courseId = searchParams?.get("courseId");
 	const paymentId = searchParams?.get("paymentId");
+
+	const loadCourseDetails = useCallback(async () => {
+		try {
+			const response = await fetch(`/api/courses/${courseId}`);
+			if (response.ok) {
+				const data = await response.json();
+				setCourse(data.data);
+			}
+		} catch (error) {
+			console.error("Error loading course:", error);
+		} finally {
+			setLoading(false);
+		}
+	}, [courseId]);
 
 	useEffect(() => {
 		if (!user) {
@@ -38,21 +53,7 @@ export default function PaymentSuccessPage() {
 		} else {
 			setLoading(false);
 		}
-	}, [courseId, user]);
-
-	const loadCourseDetails = async () => {
-		try {
-			const response = await fetch(`/api/courses/${courseId}`);
-			if (response.ok) {
-				const data = await response.json();
-				setCourse(data.data);
-			}
-		} catch (error) {
-			console.error("Error loading course:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
+	}, [courseId, user, router, loadCourseDetails]);
 
 	if (loading) {
 		return (
@@ -102,9 +103,11 @@ export default function PaymentSuccessPage() {
 							<div className="flex flex-col md:flex-row items-center space-y-6 md:space-y-0 md:space-x-8">
 								<div className="flex-shrink-0">
 									{course.imageUrl ? (
-										<img
+										<Image
 											src={course.imageUrl}
 											alt={course.courseName}
+											width={128}
+											height={128}
 											className="w-32 h-32 object-cover rounded-lg"
 										/>
 									) : (
@@ -176,7 +179,7 @@ export default function PaymentSuccessPage() {
 
 					{/* What's Next */}
 					<div className="bg-black/30 backdrop-blur-md border border-blue-800/30 rounded-xl p-8">
-						<h2 className="text-2xl font-bold text-white mb-6 text-center">What's Next?</h2>
+						<h2 className="text-2xl font-bold text-white mb-6 text-center">What&apos;s Next?</h2>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 							<div className="text-center">
 								<div
@@ -245,5 +248,13 @@ export default function PaymentSuccessPage() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function PaymentSuccessPage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<PaymentSuccessContent />
+		</Suspense>
 	);
 }
